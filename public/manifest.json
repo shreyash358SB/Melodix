@@ -1,6 +1,7 @@
 {
   "name": "Melodix — Premium Music Experience",
   "short_name": "Melodix",
+  "description": "A modern, dark cinematic music streaming web app inspired by Resso and Spotify built for Android.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
