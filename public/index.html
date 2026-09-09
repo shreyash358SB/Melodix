@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Melodix - Phase 1</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #121212; color: #fff; margin: 0; padding: 16px; }
+        h2 { color: #1db954; text-align: center; }
+        .search-box { display: flex; gap: 8px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #282828; color: #fff; font-size: 16px; }
+        button { padding: 12px 20px; border-radius: 8px; border: none; background: #1db954; color: #fff; font-weight: bold; cursor: pointer; }
+        .track-item { display: flex; align-items: center; gap: 12px; background: #181818; padding: 10px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
+        .track-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+        .track-info h4 { margin: 0 0 4px 0; font-size: 14px; }
+        .track-info p { margin: 0; font-size: 12px; color: #b3b3b3; }
+        #player-container { margin-top: 20px; text-align: center; }
+        iframe { width: 100%; height: 200px; border-radius: 12px; border: none; }
+    </style>
+</head>
+<body>
+
+    <h2>🎵 Melodix Music Player</h2>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="गाणं किंवा कलाकार सर्च करा...">
+        <button onclick="searchMusic()">Search</button>
+    </div>
+
+    <div id="results"></div>
+
+    <div id="player-container">
+        <div id="youtube-player"></div>
+    </div>
+
+    <script>
+        let player;
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        document.head.appendChild(tag);
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('youtube-player', {
+                height: '200',
+                width: '100%',
+                videoId: '',
+                playerVars: { 'playsinline': 1, 'autoplay': 1 }
+            });
+        }
+
+        async function searchMusic() {
+            const query = document.getElementById('searchInput').value;
+            if (!query) return;
+
+            const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            if (data.success && data.tracks.length > 0) {
+                data.tracks.forEach(track => {
+                    const div = document.createElement('div');
+                    div.className = 'track-item';
+                    div.innerHTML = `
+                        <img src="${track.thumbnail}" alt="Thumb">
+                        <div class="track-info">
+                            <h4>${track.title}</h4>
+                            <p>${track.channelTitle}</p>
+                        </div>
+                    `;
+                    div.onclick = () => playSong(track.videoId);
+                    resultsDiv.appendChild(div);
+                });
+            } else {
+                resultsDiv.innerHTML = '<p style="text-align:center; color:#b3b3b3;">काहीच सापडले नाही.</p>';
+            }
+        }
+
+        function playSong(videoId) {
+            if (player && player.loadVideoById) {
+                player.loadVideoById(videoId);
+            }
+        }
+    </script>
+</body>
+</html>
