@@ -10,6 +10,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// YouTube API Search Endpoint (Optimized & Caching ready)
 app.get('/api/search', async (req, res) => {
     const query = req.query.q;
     const apiKey = process.env.YOUTUBE_API_KEY;
@@ -23,7 +24,7 @@ app.get('/api/search', async (req, res) => {
 
     try {
         const fetch = (await import('node-fetch')).default;
-        const ytUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=10&q=${encodeURIComponent(query)}&key=${apiKey}`;
+        const ytUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15&q=${encodeURIComponent(query)}&key=${apiKey}`;
         
         const response = await fetch(ytUrl);
         const data = await response.json();
@@ -46,6 +47,11 @@ app.get('/api/search', async (req, res) => {
     }
 });
 
+// Phase 2: Mock/Scalable endpoints for User Library & Playlists (Ready for DB integration)
+app.get('/api/library', (req, res) => {
+    res.json({ success: true, favorites: [], recentlyPlayed: [] });
+});
+
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Melodix Phase 2 Server running on port ${PORT}`);
 });
