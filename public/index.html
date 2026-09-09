@@ -259,7 +259,7 @@
     <div id="search-view" class="view">
         <div class="search-box">
             <svg viewBox="0 0 24 24"><path d="M10 2a8 8 0 105.293 14.293l4.707 4.707 1.414-1.414-4.707-4.707A8 8 0 0010 2zm0 2a6 6 0 110 12 6 6 0 010-12z"/></svg>
-            <input type="text" id="searchInput" placeholder="Search songs, artists..." onkeypress="if(event.key==='Enter') searchMusic()">
+            <input type="text" id="searchInput" placeholder="Search any song, artist..." onkeypress="if(event.key==='Enter') searchMusic()">
             <button class="search-btn" onclick="searchMusic()">Search</button>
         </div>
         <div class="recent-searches" id="recentSearchesBar" style="display:none;"></div>
@@ -362,7 +362,7 @@
         let progressInterval = null;
         let recentSearches = JSON.parse(localStorage.getItem('melodix_recent') || '[]');
 
-        const allSongs = [
+        const defaultTrending = [
             { videoId: 'kJQP7kiw5Fk', title: 'Despacito', channelTitle: 'Luis Fonsi', thumbnail: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300' },
             { videoId: 'JGwWNGJdvx8', title: 'Shape of You', channelTitle: 'Ed Sheeran', thumbnail: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300' },
             { videoId: '09R8_2nJtjg', title: 'Sugar', channelTitle: 'Maroon 5', thumbnail: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300' },
@@ -371,15 +371,15 @@
         ];
 
         const playlists = [
-            { title: 'Top Hits 2026', cover: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300' },
-            { title: 'Deep House Mix', cover: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300' },
-            { title: 'Party Anthems', cover: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300' }
+            { title: 'Top Hits 2026', query: 'Top Hits songs', cover: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300' },
+            { title: 'Deep House Mix', query: 'Deep House music', cover: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300' },
+            { title: 'Party Anthems', query: 'Party dance songs', cover: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300' }
         ];
 
         const artists = [
-            { name: 'Ed Sheeran', img: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300' },
-            { name: 'Bruno Mars', img: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300' },
-            { name: 'Maroon 5', img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300' }
+            { name: 'Arijit Singh', query: 'Arijit Singh hits', img: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300' },
+            { name: 'Diljit Dosanjh', query: 'Diljit Dosanjh songs', img: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300' },
+            { name: 'Badshah', query: 'Badshah party songs', img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300' }
         ];
 
         const tag = document.createElement('script');
@@ -466,7 +466,7 @@
 
         function loadHomeData() {
             document.getElementById('playlist-carousel').innerHTML = playlists.map(p => `
-                <div class="h-card" onclick="filterSongs('${p.title}')">
+                <div class="h-card" onclick="fetchCustomSongs('${p.query}')">
                     <img src="${p.cover}" alt="">
                     <p>${p.title}</p>
                     <span>Playlist</span>
@@ -474,25 +474,30 @@
             `).join('');
 
             document.getElementById('artist-carousel').innerHTML = artists.map(a => `
-                <div class="h-card" onclick="filterSongs('${a.name}')">
+                <div class="h-card" onclick="fetchCustomSongs('${a.query}')">
                     <img src="${a.img}" alt="" style="border-radius: 50%;">
                     <p>${a.name}</p>
                     <span>Artist</span>
                 </div>
             `).join('');
 
-            queue = allSongs;
-            renderList(allSongs, 'trending-list');
+            queue = defaultTrending;
+            renderList(defaultTrending, 'trending-list');
         }
 
-        function filterSongs(keyword) {
-            const filtered = allSongs.filter(s => s.title.toLowerCase().includes(keyword.toLowerCase()) || s.channelTitle.toLowerCase().includes(keyword.toLowerCase()));
-            queue = filtered.length > 0 ? filtered : allSongs;
-            renderList(queue, 'trending-list');
+        async function fetchCustomSongs(query) {
+            try {
+                const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                if(data.success && data.tracks.length > 0) {
+                    queue = data.tracks;
+                    renderList(data.tracks, 'trending-list');
+                }
+            } catch(e) { console.error(e); }
         }
 
-        function searchMusic() {
-            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+        async function searchMusic() {
+            const query = document.getElementById('searchInput').value.trim();
             if(!query) return;
 
             if(!recentSearches.includes(query)) {
@@ -502,9 +507,19 @@
             }
             renderRecentSearches();
 
-            const results = allSongs.filter(s => s.title.toLowerCase().includes(query) || s.channelTitle.toLowerCase().includes(query));
-            queue = results;
-            renderList(results, 'search-results');
+            try {
+                const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                if(data.success) {
+                    queue = data.tracks;
+                    renderList(data.tracks, 'search-results');
+                } else {
+                    document.getElementById('search-results').innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-secondary);">No tracks found</div>';
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('search-results').innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-secondary);">Search error occurred</div>';
+            }
         }
 
         function renderRecentSearches() {
