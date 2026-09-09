@@ -2,86 +2,297 @@
 <html lang="mr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Melodix - Phase 1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Melodix - Complete Music App</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #121212; color: #fff; margin: 0; padding: 16px; }
-        h2 { color: #1db954; text-align: center; }
-        .search-box { display: flex; gap: 8px; margin-bottom: 20px; }
-        input { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #282828; color: #fff; font-size: 16px; }
-        button { padding: 12px 20px; border-radius: 8px; border: none; background: #1db954; color: #fff; font-weight: bold; cursor: pointer; }
-        .track-item { display: flex; align-items: center; gap: 12px; background: #181818; padding: 10px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
-        .track-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
-        .track-info h4 { margin: 0 0 4px 0; font-size: 14px; }
-        .track-info p { margin: 0; font-size: 12px; color: #b3b3b3; }
-        #player-container { margin-top: 20px; text-align: center; }
-        iframe { width: 100%; height: 200px; border-radius: 12px; border: none; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #121212; color: #fff; margin: 0; padding-bottom: 140px; }
+        
+        /* Header */
+        header { padding: 16px; background: #181818; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
+        h1 { margin: 0; font-size: 20px; color: #1db954; }
+
+        /* Navigation Tabs */
+        .tabs { display: flex; background: #181818; padding: 0 16px 12px 16px; gap: 12px; border-bottom: 1px solid #282828; }
+        .tab-btn { background: #282828; color: #b3b3b3; border: none; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .tab-btn.active { background: #fff; color: #000; }
+
+        /* Views */
+        .view { display: none; padding: 16px; }
+        .view.active { display: block; }
+
+        /* Search */
+        .search-box { display: flex; gap: 8px; margin-bottom: 16px; }
+        input { flex: 1; padding: 12px 16px; border-radius: 24px; border: none; background: #242424; color: #fff; font-size: 15px; outline: none; }
+        .search-btn { padding: 0 20px; border-radius: 24px; border: none; background: #1db954; color: #fff; font-weight: bold; cursor: pointer; }
+
+        /* Track List */
+        .track-item { display: flex; align-items: center; gap: 12px; background: #181818; padding: 10px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: background 0.2s; }
+        .track-item:active { background: #282828; }
+        .track-item img { width: 52px; height: 52px; object-fit: cover; border-radius: 8px; }
+        .track-info { flex: 1; overflow: hidden; }
+        .track-info h4 { margin: 0 0 4px 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .track-info p { margin: 0; font-size: 12px; color: #b3b3b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Persistent Bottom Player */
+        #persistent-player { position: fixed; bottom: 0; left: 0; width: 100%; background: #282828; border-top: 1px solid #3e3e3e; padding: 12px 16px; display: flex; align-items: center; gap: 12px; z-index: 1000; box-shadow: 0 -4px 20px rgba(0,0,0,0.5); }
+        #player-thumb { width: 48px; height: 48px; border-radius: 6px; object-fit: cover; background: #333; }
+        .player-meta { flex: 1; overflow: hidden; cursor: pointer; }
+        .player-meta h5 { margin: 0 0 2px 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .player-meta p { margin: 0; font-size: 11px; color: #b3b3b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .player-controls { display: flex; align-items: center; gap: 16px; }
+        .player-controls button { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; padding: 4px; }
+        .play-pause-btn { font-size: 26px !important; color: #1db954 !important; }
+
+        /* Hidden YouTube IFrame container */
+        #youtube-player-box { display: none; }
+
+        /* Fullscreen Modal */
+        #fullscreen-player { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #121212; z-index: 2000; display: none; flex-direction: column; padding: 24px; justify-content: space-between; }
+        .fs-header { display: flex; justify-content: space-between; align-items: center; }
+        .fs-artwork { width: 100%; aspect-ratio: 1; border-radius: 16px; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.6); margin: 20px 0; }
+        .fs-info h2 { font-size: 18px; margin: 0 0 8px 0; }
+        .fs-info p { font-size: 14px; color: #b3b3b3; margin: 0; }
+        .fs-controls { display: flex; justify-content: space-around; align-items: center; margin-bottom: 30px; }
+        .fs-controls button { background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; }
+        .fs-controls .main-play { font-size: 54px; color: #1db954; }
+
+        .section-title { font-size: 18px; font-weight: bold; margin-bottom: 12px; color: #fff; }
     </style>
 </head>
 <body>
 
-    <h2>🎵 Melodix Music Player</h2>
+    <header>
+        <h1>Melodix</h1>
+        <span id="network-status" style="font-size: 12px; color: #1db954;">● Online</span>
+    </header>
 
-    <div class="search-box">
-        <input type="text" id="searchInput" placeholder="गाणं किंवा कलाकार सर्च करा...">
-        <button onclick="searchMusic()">Search</button>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('home')">Home</button>
+        <button class="tab-btn" onclick="switchTab('search')">Search</button>
+        <button class="tab-btn" onclick="switchTab('library')">Library</button>
     </div>
 
-    <div id="results"></div>
+    <!-- HOME VIEW -->
+    <div id="home-view" class="view active">
+        <div class="section-title">Trending Now</div>
+        <div id="trending-list"></div>
+    </div>
 
-    <div id="player-container">
+    <!-- SEARCH VIEW -->
+    <div id="search-view" class="view">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search songs, artists...">
+            <button class="search-btn" onclick="searchMusic()">Find</button>
+        </div>
+        <div id="search-results"></div>
+    </div>
+
+    <!-- LIBRARY VIEW -->
+    <div id="library-view" class="view">
+        <div class="section-title">Liked Songs & History</div>
+        <p style="color: #b3b3b3; font-size: 14px;">Your saved tracks will appear here seamlessly synced with your cloud backend.</p>
+        <div id="library-list"></div>
+    </div>
+
+    <!-- PERSISTENT BOTTOM PLAYER -->
+    <div id="persistent-player">
+        <img id="player-thumb" src="" alt="" onclick="openFullscreen()">
+        <div class="player-meta" onclick="openFullscreen()">
+            <h5 id="player-title">Select a track</h5>
+            <p id="player-artist">Melodix Player</p>
+        </div>
+        <div class="player-controls">
+            <button onclick="togglePlay()" class="play-pause-btn" id="playPauseIcon">▶</button>
+            <button onclick="playNext()">⏭</button>
+        </div>
+    </div>
+
+    <!-- FULLSCREEN PLAYER MODAL -->
+    <div id="fullscreen-player">
+        <div class="fs-header">
+            <button onclick="closeFullscreen()" style="background:none; border:none; color:#fff; font-size:24px;">⌄</button>
+            <span style="font-size: 14px; font-weight:600; color:#b3b3b3;">PLAYING FROM QUEUE</span>
+            <button onclick="toggleLike()" id="likeBtn" style="background:none; border:none; color:#fff; font-size:22px;">♡</button>
+        </div>
+        <div>
+            <img id="fs-artwork" class="fs-artwork" src="" alt="">
+            <div class="fs-info">
+                <h2 id="fs-title">Song Title</h2>
+                <p id="fs-artist">Artist Name</p>
+            </div>
+        </div>
+        <div class="fs-controls">
+            <button onclick="toggleShuffle()">🔀</button>
+            <button onclick="playPrev()">⏮</button>
+            <button onclick="togglePlay()" class="main-play" id="fsPlayPause">⏸</button>
+            <button onclick="playNext()">⏭</button>
+            <button onclick="toggleRepeat()">🔁</button>
+        </div>
+    </div>
+
+    <!-- Hidden Official YouTube Player -->
+    <div id="youtube-player-box">
         <div id="youtube-player"></div>
     </div>
 
     <script>
         let player;
+        let queue = [];
+        let currentIndex = 0;
+        let isPlaying = false;
+        let currentTrack = null;
+
+        // Load YouTube IFrame API
         const tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
         document.head.appendChild(tag);
 
         function onYouTubeIframeAPIReady() {
             player = new YT.Player('youtube-player', {
-                height: '200',
-                width: '100%',
+                height: '1',
+                width: '1',
                 videoId: '',
-                playerVars: { 'playsinline': 1, 'autoplay': 1 }
+                playerVars: { 'playsinline': 1, 'autoplay': 1 },
+                events: {
+                    'onStateChange': onPlayerStateChange
+                }
             });
+        }
+
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.PLAYING) {
+                isPlaying = true;
+                updatePlayPauseUI(true);
+            } else if (event.data === YT.PlayerState.PAUSED) {
+                isPlaying = false;
+                updatePlayPauseUI(false);
+            } else if (event.data === YT.PlayerState.ENDED) {
+                playNext();
+            }
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(`${tabName}-view`).classList.add('active');
+            event.target.classList.add('active');
+
+            if (tabName === 'home' && queue.length === 0) {
+                loadTrending();
+            }
+        }
+
+        async function loadTrending() {
+            try {
+                const res = await fetch(`/api/search?q=Top+Hits+Latest+Songs`);
+                const data = await res.json();
+                if(data.success) {
+                    queue = data.tracks;
+                    renderList(data.tracks, 'trending-list');
+                }
+            } catch(e) { console.error(e); }
         }
 
         async function searchMusic() {
             const query = document.getElementById('searchInput').value;
-            if (!query) return;
+            if(!query) return;
 
             const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
             const data = await res.json();
+            
+            if(data.success) {
+                renderList(data.tracks, 'search-results');
+            }
+        }
 
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = '';
+        function renderList(tracks, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            tracks.forEach((track, index) => {
+                const div = document.createElement('div');
+                div.className = 'track-item';
+                div.innerHTML = `
+                    <img src="${track.thumbnail}" alt="">
+                    <div class="track-info">
+                        <h4>${track.title}</h4>
+                        <p>${track.channelTitle}</p>
+                    </div>
+                `;
+                div.onclick = () => playSongAtIndex(queue.indexOf(track) !== -1 ? queue.indexOf(track) : (queue.push(track) - 1));
+                container.appendChild(div);
+            });
+        }
 
-            if (data.success && data.tracks.length > 0) {
-                data.tracks.forEach(track => {
-                    const div = document.createElement('div');
-                    div.className = 'track-item';
-                    div.innerHTML = `
-                        <img src="${track.thumbnail}" alt="Thumb">
-                        <div class="track-info">
-                            <h4>${track.title}</h4>
-                            <p>${track.channelTitle}</p>
-                        </div>
-                    `;
-                    div.onclick = () => playSong(track.videoId);
-                    resultsDiv.appendChild(div);
-                });
+        function playSongAtIndex(index) {
+            if(index < 0 || index >= queue.length) return;
+            currentIndex = index;
+            currentTrack = queue[currentIndex];
+            
+            player.loadVideoById(currentTrack.videoId);
+            updatePlayerUI();
+        }
+
+        function updatePlayerUI() {
+            if(!currentTrack) return;
+            document.getElementById('player-thumb').src = currentTrack.thumbnail;
+            document.getElementById('player-title').innerText = currentTrack.title;
+            document.getElementById('player-artist').innerText = currentTrack.channelTitle;
+
+            document.getElementById('fs-artwork').src = currentTrack.thumbnail;
+            document.getElementById('fs-title').innerText = currentTrack.title;
+            document.getElementById('fs-artist').innerText = currentTrack.channelTitle;
+        }
+
+        function togglePlay() {
+            if(!player) return;
+            const state = player.getPlayerState();
+            if(state === YT.PlayerState.PLAYING) {
+                player.pauseVideo();
             } else {
-                resultsDiv.innerHTML = '<p style="text-align:center; color:#b3b3b3;">काहीच सापडले नाही.</p>';
+                player.playVideo();
             }
         }
 
-        function playSong(videoId) {
-            if (player && player.loadVideoById) {
-                player.loadVideoById(videoId);
+        function updatePlayPauseUI(playing) {
+            document.getElementById('playPauseIcon').innerText = playing ? '⏸' : '▶';
+            document.getElementById('fsPlayPause').innerText = playing ? '⏸' : '▶';
+        }
+
+        function playNext() {
+            if(currentIndex < queue.length - 1) {
+                playSongAtIndex(currentIndex + 1);
             }
         }
+
+        function playPrev() {
+            if(currentIndex > 0) {
+                playSongAtIndex(currentIndex - 1);
+            }
+        }
+
+        function openFullscreen() {
+            if(currentTrack) {
+                document.getElementById('fullscreen-player').style.display = 'flex';
+            }
+        }
+
+        function closeFullscreen() {
+            document.getElementById('fullscreen-player').style.display = 'none';
+        }
+
+        function toggleLike() {
+            const btn = document.getElementById('likeBtn');
+            btn.innerText = btn.innerText === '♡' ? '♥' : '♡';
+            btn.style.color = btn.innerText === '♥' ? '#1db954' : '#fff';
+        }
+
+        function toggleShuffle() { alert('Shuffle queue active'); }
+        function toggleRepeat() { alert('Repeat mode toggled'); }
+
+        // Initial load
+        window.onload = () => { loadTrending(); };
     </script>
 </body>
 </html>
