@@ -44,8 +44,18 @@
         .player-controls button { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; padding: 4px; }
         .play-pause-btn { font-size: 26px !important; color: #1db954 !important; }
 
-        /* Hidden YouTube IFrame container */
-        #youtube-player-box { display: none; }
+        /* YouTube Player Box Visible for Mobile API Compatibility */
+        #youtube-player-box { 
+            position: fixed; 
+            bottom: 80px; 
+            left: 10px; 
+            width: 140px; 
+            height: 90px; 
+            z-index: 999; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            background: #000;
+        }
 
         /* Fullscreen Modal */
         #fullscreen-player { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #121212; z-index: 2000; display: none; flex-direction: column; padding: 24px; justify-content: space-between; }
@@ -131,7 +141,7 @@
         </div>
     </div>
 
-    <!-- Hidden Official YouTube Player -->
+    <!-- YouTube Official Player Box -->
     <div id="youtube-player-box">
         <div id="youtube-player"></div>
     </div>
@@ -150,12 +160,17 @@
 
         function onYouTubeIframeAPIReady() {
             player = new YT.Player('youtube-player', {
-                height: '1',
-                width: '1',
+                height: '90',
+                width: '140',
                 videoId: '',
-                playerVars: { 'playsinline': 1, 'autoplay': 1 },
+                playerVars: { 
+                    'playsinline': 1, 
+                    'autoplay': 1,
+                    'controls': 1
+                },
                 events: {
-                    'onStateChange': onPlayerStateChange
+                    'onStateChange': onPlayerStateChange,
+                    'onError': onPlayerError
                 }
             });
         }
@@ -168,8 +183,14 @@
                 isPlaying = false;
                 updatePlayPauseUI(false);
             } else if (event.data === YT.PlayerState.ENDED) {
+                console.log("Song ended, playing next...");
                 playNext();
             }
+        }
+
+        function onPlayerError(event) {
+            console.error("YouTube Player Error code:", event.data);
+            playNext();
         }
 
         function switchTab(tabName) {
@@ -203,7 +224,7 @@
             const data = await res.json();
             
             if(data.success) {
-                queue = data.tracks; // Update global queue with search results
+                queue = data.tracks; 
                 renderList(data.tracks, 'search-results');
             }
         }
@@ -222,7 +243,7 @@
                     </div>
                 `;
                 div.onclick = () => {
-                    queue = tracks; // Ensure current list is active queue
+                    queue = tracks; 
                     playSongAtIndex(index);
                 };
                 container.appendChild(div);
@@ -271,7 +292,6 @@
             if (currentIndex < queue.length - 1) {
                 playSongAtIndex(currentIndex + 1);
             } else {
-                // Loop back to start of queue if it reaches the end
                 playSongAtIndex(0);
             }
         }
@@ -306,13 +326,11 @@
                 queue.sort(() => Math.random() - 0.5);
                 currentIndex = 0;
                 playSongAtIndex(0);
-                alert('Queue shuffled!');
             }
         }
         
         function toggleRepeat() { alert('Repeat mode active'); }
 
-        // Initial load
         window.onload = () => { loadTrending(); };
     </script>
 </body>
