@@ -197,7 +197,6 @@
         .like-btn svg { width: 26px; height: 26px; fill: var(--text-secondary); transition: transform 0.1s; }
         .like-btn.liked svg { fill: var(--accent-green); transform: scale(1.1); }
 
-        /* Perfect Fully Visible Seekable Progress Bar */
         .progress-container { width: 100%; margin-bottom: 20px; }
         .progress-slider { 
             width: 100%; 
@@ -317,7 +316,6 @@
                 </div>
             </div>
 
-            <!-- Functional Seekable Progress Slider -->
             <div class="progress-container">
                 <input type="range" id="progressSlider" class="progress-slider" value="0" min="0" max="100" step="0.1" oninput="seekAudio(this.value)">
                 <div class="time-row">
@@ -346,7 +344,6 @@
         </div>
     </div>
 
-    <!-- YouTube Official Player Box -->
     <div id="youtube-player-box">
         <div id="youtube-player"></div>
     </div>
@@ -361,9 +358,29 @@
         let currentIndex = 0;
         let isPlaying = false;
         let currentTrack = null;
-        let likedSongIds = new Set();
+        let likedSongs = JSON.parse(localStorage.getItem('melodix_likes') || '[]');
         let progressInterval = null;
         let recentSearches = JSON.parse(localStorage.getItem('melodix_recent') || '[]');
+
+        const allSongs = [
+            { videoId: 'kJQP7kiw5Fk', title: 'Despacito', channelTitle: 'Luis Fonsi', thumbnail: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300' },
+            { videoId: 'JGwWNGJdvx8', title: 'Shape of You', channelTitle: 'Ed Sheeran', thumbnail: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300' },
+            { videoId: '09R8_2nJtjg', title: 'Sugar', channelTitle: 'Maroon 5', thumbnail: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300' },
+            { videoId: 'fJ9rUzIMcZQ', title: 'Bad Guy', channelTitle: 'Billie Eilish', thumbnail: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300' },
+            { videoId: 'OPf0YbXqDm0', title: 'Uptown Funk', channelTitle: 'Mark Ronson ft. Bruno Mars', thumbnail: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300' }
+        ];
+
+        const playlists = [
+            { title: 'Top Hits 2026', cover: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300' },
+            { title: 'Deep House Mix', cover: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300' },
+            { title: 'Party Anthems', cover: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300' }
+        ];
+
+        const artists = [
+            { name: 'Ed Sheeran', img: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300' },
+            { name: 'Bruno Mars', img: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300' },
+            { name: 'Maroon 5', img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300' }
+        ];
 
         const tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
@@ -438,7 +455,7 @@
             document.getElementById(`${tabName}-view`).classList.add('active');
             event.target.classList.add('active');
 
-            if (tabName === 'home' && queue.length === 0) {
+            if (tabName === 'home') {
                 loadHomeData();
             } else if (tabName === 'search') {
                 renderRecentSearches();
@@ -447,51 +464,35 @@
             }
         }
 
-        async function loadHomeData() {
-            try {
-                const plRes = await fetch('/api/playlists');
-                const plData = await plRes.json();
-                if(plData.success) {
-                    const plContainer = document.getElementById('playlist-carousel');
-                    plContainer.innerHTML = plData.playlists.map(p => `
-                        <div class="h-card" onclick="loadCategorySongs('${p.title}')">
-                            <img src="${p.cover}" alt="">
-                            <p>${p.title}</p>
-                            <span>Playlist</span>
-                        </div>
-                    `).join('');
-                }
+        function loadHomeData() {
+            document.getElementById('playlist-carousel').innerHTML = playlists.map(p => `
+                <div class="h-card" onclick="filterSongs('${p.title}')">
+                    <img src="${p.cover}" alt="">
+                    <p>${p.title}</p>
+                    <span>Playlist</span>
+                </div>
+            `).join('');
 
-                const artists = [
-                    { name: 'Arijit Singh', q: 'Arijit Singh hits', img: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300' },
-                    { name: 'Diljit Dosanjh', q: 'Diljit Dosanjh songs', img: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300' },
-                    { name: 'Badshah', q: 'Badshah songs', img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300' }
-                ];
-                document.getElementById('artist-carousel').innerHTML = artists.map(a => `
-                    <div class="h-card" onclick="loadCategorySongs('${a.q}')">
-                        <img src="${a.img}" alt="" style="border-radius: 50%;">
-                        <p>${a.name}</p>
-                        <span>Artist</span>
-                    </div>
-                `).join('');
+            document.getElementById('artist-carousel').innerHTML = artists.map(a => `
+                <div class="h-card" onclick="filterSongs('${a.name}')">
+                    <img src="${a.img}" alt="" style="border-radius: 50%;">
+                    <p>${a.name}</p>
+                    <span>Artist</span>
+                </div>
+            `).join('');
 
-                loadCategorySongs('Top Hits 2026');
-            } catch(e) { console.error(e); }
+            queue = allSongs;
+            renderList(allSongs, 'trending-list');
         }
 
-        async function loadCategorySongs(query) {
-            try {
-                const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-                const data = await res.json();
-                if(data.success) {
-                    queue = data.tracks;
-                    renderList(data.tracks, 'trending-list');
-                }
-            } catch(e) { console.error(e); }
+        function filterSongs(keyword) {
+            const filtered = allSongs.filter(s => s.title.toLowerCase().includes(keyword.toLowerCase()) || s.channelTitle.toLowerCase().includes(keyword.toLowerCase()));
+            queue = filtered.length > 0 ? filtered : allSongs;
+            renderList(queue, 'trending-list');
         }
 
-        async function searchMusic() {
-            const query = document.getElementById('searchInput').value.trim();
+        function searchMusic() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
             if(!query) return;
 
             if(!recentSearches.includes(query)) {
@@ -501,14 +502,9 @@
             }
             renderRecentSearches();
 
-            try {
-                const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-                const data = await res.json();
-                if(data.success) {
-                    queue = data.tracks; 
-                    renderList(data.tracks, 'search-results');
-                }
-            } catch (e) { console.error(e); }
+            const results = allSongs.filter(s => s.title.toLowerCase().includes(query) || s.channelTitle.toLowerCase().includes(query));
+            queue = results;
+            renderList(results, 'search-results');
         }
 
         function renderRecentSearches() {
@@ -523,24 +519,18 @@
             `).join('');
         }
 
-        async function loadLibrary() {
-            try {
-                const res = await fetch('/api/library');
-                const data = await res.json();
-                if (data.success) {
-                    likedSongIds = new Set(data.library.likedSongs.map(t => t.videoId));
-                    if (data.library.likedSongs.length > 0) {
-                        renderList(data.library.likedSongs, 'library-list');
-                    } else {
-                        document.getElementById('library-list').innerHTML = `
-                            <div class="empty-state" style="text-align:center; padding: 40px; color:var(--text-secondary);">
-                                <h3>No songs saved yet</h3>
-                                <p>Start listening and build your library.</p>
-                            </div>
-                        `;
-                    }
-                }
-            } catch (e) { console.error(e); }
+        function loadLibrary() {
+            const container = document.getElementById('library-list');
+            if (likedSongs.length > 0) {
+                renderList(likedSongs, 'library-list');
+            } else {
+                container.innerHTML = `
+                    <div class="empty-state" style="text-align:center; padding: 40px; color:var(--text-secondary);">
+                        <h3>No songs saved yet</h3>
+                        <p>Start listening and build your library.</p>
+                    </div>
+                `;
+            }
         }
 
         function renderList(tracks, containerId) {
@@ -587,7 +577,7 @@
             document.getElementById('fs-title').innerText = currentTrack.title;
             document.getElementById('fs-artist').innerText = currentTrack.channelTitle;
 
-            const isLiked = likedSongIds.has(currentTrack.videoId);
+            const isLiked = likedSongs.some(s => s.videoId === currentTrack.videoId);
             const likeBtn = document.getElementById('likeBtn');
             if (isLiked) likeBtn.classList.add('liked');
             else likeBtn.classList.remove('liked');
@@ -619,23 +609,16 @@
             else playSongAtIndex(queue.length - 1);
         }
 
-        async function toggleLike() {
+        function toggleLike() {
             if (!currentTrack) return;
-            try {
-                const res = await fetch('/api/library/like', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(currentTrack)
-                });
-                const data = await res.json();
-                if (data.success) {
-                    likedSongIds = new Set(data.likedSongs.map(t => t.videoId));
-                    const isLiked = likedSongIds.has(currentTrack.videoId);
-                    const likeBtn = document.getElementById('likeBtn');
-                    if (isLiked) likeBtn.classList.add('liked');
-                    else likeBtn.classList.remove('liked');
-                }
-            } catch (e) { console.error(e); }
+            const index = likedSongs.findIndex(s => s.videoId === currentTrack.videoId);
+            if (index > -1) {
+                likedSongs.splice(index, 1);
+            } else {
+                likedSongs.push(currentTrack);
+            }
+            localStorage.setItem('melodix_likes', JSON.stringify(likedSongs));
+            updatePlayerUI();
         }
 
         function openFullscreen() { if(currentTrack) document.getElementById('fullscreen-player').style.display = 'flex'; }
