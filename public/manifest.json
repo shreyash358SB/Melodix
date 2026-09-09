@@ -1,15 +1,16 @@
 {
-  "name": "Melodix Music App",
+  "name": "Melodix — Premium Music Experience",
   "short_name": "Melodix",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#121212",
-  "theme_color": "#1db954",
+  "background_color": "#0a0a0a",
+  "theme_color": "#1ed760",
   "icons": [
     {
       "src": "https://img.icons8.com/color/512/spotify.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
