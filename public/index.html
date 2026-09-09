@@ -100,8 +100,7 @@
 
     <!-- LIBRARY VIEW -->
     <div id="library-view" class="view">
-        <div class="section-title">Liked Songs & History</div>
-        <p style="color: #b3b3b3; font-size: 14px;">Your saved tracks will appear here seamlessly synced with your cloud backend.</p>
+        <div class="section-title">Liked Songs (Cloud Synced)</div>
         <div id="library-list"></div>
     </div>
 
@@ -152,8 +151,8 @@
         let currentIndex = 0;
         let isPlaying = false;
         let currentTrack = null;
+        let likedSongIds = new Set();
 
-        // Load YouTube IFrame API
         const tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
         document.head.appendChild(tag);
@@ -163,11 +162,7 @@
                 height: '90',
                 width: '140',
                 videoId: '',
-                playerVars: { 
-                    'playsinline': 1, 
-                    'autoplay': 1,
-                    'controls': 1
-                },
+                playerVars: { 'playsinline': 1, 'autoplay': 1, 'controls': 1 },
                 events: {
                     'onStateChange': onPlayerStateChange,
                     'onError': onPlayerError
@@ -183,13 +178,11 @@
                 isPlaying = false;
                 updatePlayPauseUI(false);
             } else if (event.data === YT.PlayerState.ENDED) {
-                console.log("Song ended, playing next...");
                 playNext();
             }
         }
 
         function onPlayerError(event) {
-            console.error("YouTube Player Error code:", event.data);
             playNext();
         }
 
@@ -202,6 +195,8 @@
 
             if (tabName === 'home' && queue.length === 0) {
                 loadTrending();
+            } else if (tabName === 'library') {
+                loadLibrary();
             }
         }
 
@@ -229,9 +224,26 @@
             }
         }
 
+        async function loadLibrary() {
+            try {
+                const res = await fetch('/api/library');
+                const data = await res.json();
+                if (data.success) {
+                    likedSongIds = new Set(data.library.likedSongs.map(t => t.videoId));
+                    renderList(data.library.likedSongs, 'library-list');
+                }
+            } catch (e) {
+                console.error("Error loading library:", e);
+            }
+        }
+
         function renderList(tracks, containerId) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
+            if(!tracks || tracks.length === 0) {
+                container.innerHTML = '<p style="color:#b3b3b3; font-size:14px;">No tracks found.</p>';
+                return;
+            }
             tracks.forEach((track, index) => {
                 const div = document.createElement('div');
                 div.className = 'track-item';
@@ -270,6 +282,11 @@
             document.getElementById('fs-artwork').src = currentTrack.thumbnail;
             document.getElementById('fs-title').innerText = currentTrack.title;
             document.getElementById('fs-artist').innerText = currentTrack.channelTitle;
+
+            const isLiked = likedSongIds.has(currentTrack.videoId);
+            const btn = document.getElementById('likeBtn');
+            btn.innerText = isLiked ? '♥' : '♡';
+            btn.style.color = isLiked ? '#1db954' : '#fff';
         }
 
         function togglePlay() {
@@ -305,6 +322,28 @@
             }
         }
 
+        async function toggleLike() {
+            if (!currentTrack) return;
+            const btn = document.getElementById('likeBtn');
+            
+            try {
+                const res = await fetch('/api/library/like', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentTrack)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    likedSongIds = new Set(data.likedSongs.map(t => t.videoId));
+                    const isLiked = likedSongIds.has(currentTrack.videoId);
+                    btn.innerText = isLiked ? '♥' : '♡';
+                    btn.style.color = isLiked ? '#1db954' : '#fff';
+                }
+            } catch (e) {
+                console.error("Error syncing like:", e);
+            }
+        }
+
         function openFullscreen() {
             if(currentTrack) {
                 document.getElementById('fullscreen-player').style.display = 'flex';
@@ -313,12 +352,6 @@
 
         function closeFullscreen() {
             document.getElementById('fullscreen-player').style.display = 'none';
-        }
-
-        function toggleLike() {
-            const btn = document.getElementById('likeBtn');
-            btn.innerText = btn.innerText === '♡' ? '♥' : '♡';
-            btn.style.color = btn.innerText === '♥' ? '#1db954' : '#fff';
         }
 
         function toggleShuffle() { 
