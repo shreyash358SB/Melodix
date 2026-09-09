@@ -10,7 +10,13 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// YouTube API Search Endpoint (Optimized & Caching ready)
+// Temporary Cloud Store (Will be mapped to DB tables in full production)
+let cloudLibrary = {
+    likedSongs: [],
+    recentlyPlayed: []
+};
+
+// YouTube API Search Endpoint
 app.get('/api/search', async (req, res) => {
     const query = req.query.q;
     const apiKey = process.env.YOUTUBE_API_KEY;
@@ -47,11 +53,29 @@ app.get('/api/search', async (req, res) => {
     }
 });
 
-// Phase 2: Mock/Scalable endpoints for User Library & Playlists (Ready for DB integration)
+// Get User Library (Liked & History)
 app.get('/api/library', (req, res) => {
-    res.json({ success: true, favorites: [], recentlyPlayed: [] });
+    res.json({ success: true, library: cloudLibrary });
+});
+
+// Save Liked Song to Cloud
+app.post('/api/library/like', (req, res) => {
+    const track = req.body;
+    if (!track || !track.videoId) {
+        return res.status(400).json({ error: 'Invalid track data' });
+    }
+    
+    // Check if already liked, toggle or add
+    const exists = cloudLibrary.likedSongs.find(t => t.videoId === track.videoId);
+    if (!exists) {
+        cloudLibrary.likedSongs.unshift(track);
+    } else {
+        cloudLibrary.likedSongs = cloudLibrary.likedSongs.filter(t => t.videoId !== track.videoId);
+    }
+    
+    res.json({ success: true, likedSongs: cloudLibrary.likedSongs });
 });
 
 app.listen(PORT, () => {
-    console.log(`Melodix Phase 2 Server running on port ${PORT}`);
+    console.log(`Melodix Cloud Server running on port ${PORT}`);
 });
